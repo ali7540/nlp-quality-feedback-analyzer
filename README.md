@@ -78,3 +78,79 @@ Make sure you have python 3.8+ installed.
    ```bash
    jupyter notebook notebooks/week1_preprocessing.ipynb
    ```
+   ## 🚦 Project Status (Week 1 - Second Half Completed)
+
+### Person 2 Completion Summary (Second Half of Week 1)
+
+* **Loaded Intermediate Dataset**: Imported `data/processed/reviews_stage1.csv` containing 10,000 unique reviews with columns:
+
+  * `Text` (original review text)
+  * `cleaned_text` (lowercased and punctuation-stripped text)
+  * `Score` (review rating)
+
+* **Tokenization**:
+
+  * Tokenized the `cleaned_text` column into individual words using NLTK's `word_tokenize()` function.
+  * Stored tokenized output in a separate column for traceability.
+
+* **Stopword Removal**:
+
+  * Removed common English stopwords using NLTK's stopword corpus.
+  * Generated a cleaned token list containing only informative terms.
+
+* **Lemmatization**:
+
+  * Applied NLTK's `WordNetLemmatizer` to reduce words to their base forms.
+  * Preserved semantic meaning while reducing vocabulary size.
+
+* **Final Text Preparation**:
+
+  * Combined lemmatized tokens into a final processed text column named `final_cleaned_text`.
+  * Retained all intermediate columns (`Text`, `cleaned_text`, tokens, and final cleaned text) for transparency and future analysis.
+
+* **Processed Dataset Export**:
+
+  * Saved the fully processed dataset as:
+
+    * `data/processed/reviews_cleaned.csv`
+  * This file serves as the final Week 1 output and will be used in subsequent project phases.
+
+* **Word Cloud Visualization**:
+
+  * Generated a word cloud for **1-star reviews** and saved it as:
+
+    * `outputs/wordclouds/wordcloud_1star.png`
+  * Generated a word cloud for **5-star reviews** and saved it as:
+
+    * `outputs/wordclouds/wordcloud_5star.png`
+
+* **Insights & Observations**:
+
+  * Positive reviews frequently contained words such as *great*, *best*, *love*, and *delicious*, indicating customer satisfaction.
+  * Negative reviews contained more purchase- and experience-related terms such as *received*, *bought*, *tried*, and *time*.
+  * Product-related terms including *taste*, *tea*, *coffee*, and *flavor* appeared in both positive and negative reviews, highlighting the primary discussion themes.
+  * Word clouds provided a visual comparison of vocabulary differences between positive and negative customer feedback.
+
+* **Dependencies Updated**:
+
+  * Added required NLP and visualization libraries to `requirements.txt`:
+
+    * `nltk`
+    * `wordcloud`
+    * `matplotlib`
+    * `pandas`
+    * `numpy`
+    ### Output Files
+- data/processed/reviews_cleaned.csv
+- outputs/wordclouds/wordcloud_1star.png
+- outputs/wordclouds/wordcloud_5star.png
+
+* **Week 1 Status**:
+
+  * ✅ Text preprocessing completed
+  * ✅ Tokenization completed
+  * ✅ Stopword removal completed
+  * ✅ Lemmatization completed
+  * ✅ Word cloud generation completed
+  * ✅ Final cleaned dataset exported
+  * ✅ Week 1 deliverables completed
