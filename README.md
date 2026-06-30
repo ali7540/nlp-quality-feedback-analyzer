@@ -1,6 +1,6 @@
 # NLP-Based Quality Feedback Analyzer
 
-The **NLP-Based Quality Feedback Analyzer** is an end-to-end natural language processing pipeline designed to ingest, clean, and analyze product reviews from Amazon. By employing advanced text preprocessing (tokenization, stopword filtering, lemmatization), sentiment classification, and topic modeling, the project identifies key drivers of customer satisfaction and exposes product quality issues. A dashboard interface allows stakeholder interaction with findings to facilitate quality control and customer experience optimization.
+The **NLP-Based Quality Feedback Analyzer** is an end-to-end natural language processing pipeline designed to ingest, clean, and analyze B2B customer feedback for Jindal Steel Limited (synthetic). By employing advanced text preprocessing (tokenization, stopword filtering, lemmatization), sentiment classification, and topic modeling, the project identifies key drivers of B2B customer satisfaction and exposes product quality and logistics issues. A dashboard interface allows stakeholder interaction with findings to facilitate quality control and customer experience optimization.
 
 ---
 
@@ -19,7 +19,7 @@ nlp-quality-feedback-analyzer/
 ├── app/                     # Streamlit dashboard application files
 ├── data/
 │   ├── processed/           # Processed datasets (reviews_cleaned.csv)
-│   └── raw/                 # Unmodified raw source dataset (Reviews.csv)
+│   └── raw/                 # Unmodified raw source dataset (jindal_feedback.csv)
 ├── models/                  # Saved models (classifiers, topic models)
 ├── notebooks/               # Jupyter notebooks for data analysis & pipelines
 │   └── week1_preprocessing.ipynb
@@ -33,20 +33,18 @@ nlp-quality-feedback-analyzer/
 ---
 
 ## 🔍 Preprocessing Pipeline & Details
-During the initial preprocessing phase, the raw review dataset was cleaned and curated:
-* **Dataset Auditing & Deduplication**:
-  * Ingested a raw corpus of **568,454** review records.
-  * Identified and removed **174,875** exact text duplicates.
-  * Developed a normalization algorithm (standardizing case, stripping punctuation, and collapsing spacing) to identify and remove an additional **475** near-duplicate reviews.
-  * Total duplicates removed: **175,350** reviews.
-* **Downsampling**: Sampled **exactly 10,000 unique reviews** (using `random_state=42` for reproducibility) to create a manageable development set.
+During the initial preprocessing phase, the raw dataset was cleaned and curated:
+* **B2B Steel Quality Feedback Dataset (Synthetic)**:
+  * Ingested a raw corpus of **10,000** B2B quality feedback records from Jindal Steel Limited (pre-validated with zero duplicates, zero null values, and consistent severity-to-sentiment alignment).
+  * Spans **10 product lines** (TMT Rebars, Steel Rails, HR Plates and Coils, Beams and Columns, Wire Rods, Angles and Channels, Billets, Cement, and Jindal Speedfloor) and **7 customer segments** across India.
+  * Carried forward metadata columns: `feedback_id`, `feedback_date`, `customer_type`, `customer_region`, `product_category`, `order_quantity_mt`, `severity_rating`, `feedback_text`, `feedback_topic`, `feedback_source`, `plant_location`, `resolution_status`.
 * **Cleaning Pipeline**:
-  * Lowercased text and removed all punctuation and special characters.
+  * Lowercased text and removed all punctuation and special characters from `feedback_text` to generate the `cleaned_text` column.
   * Segmented text into words (Tokenization) and excluded standard English stopwords using NLTK.
-  * Standardized terms using NLTK's `WordNetLemmatizer` to preserve grammatical roots (e.g., "waffles" $\rightarrow$ "waffle").
+  * Standardized terms using NLTK's `WordNetLemmatizer` to preserve grammatical roots, saving the result to `tokens`.
 * **Output Artifacts**:
   * Cleaned review data stored in `data/processed/reviews_cleaned.csv`.
-  * Generated 1-star and 5-star comparative word clouds inside `outputs/wordclouds/`.
+  * Generated negative and positive comparative word clouds inside `outputs/wordclouds/` (`wordcloud_negative.png` and `wordcloud_positive.png`).
 
 ---
 
