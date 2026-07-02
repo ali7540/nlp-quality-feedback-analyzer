@@ -240,13 +240,6 @@ def load_vader():
         nltk.download("vader_lexicon", quiet=True)
         return SentimentIntensityAnalyzer()
 
-@st.cache_resource
-def load_distilbert():
-    from transformers import pipeline as hf_pipeline
-    return hf_pipeline(
-        "sentiment-analysis",
-        model="distilbert-base-uncased-finetuned-sst-2-english"
-    )
 
 df_cleaned = load_data(cleaned_data_path)
 df_labeled = load_data(labeled_data_path)
@@ -372,31 +365,44 @@ if navigation == "Overview & Pipeline":
     st.markdown(f"<p style='color:{GRAY};'>Expand each step to see exactly how text is transformed through the pipeline.</p>", unsafe_allow_html=True)
 
     sample_raw = "We appreciate the prompt engineer visit, but the Rebar TMT bars from Raigarh have inconsistent tensile strength! IS 1786 compliance is failing."
+
+    # Pre-compute all transformations upfront so expanders can open in any order
+    _cleaned = re.sub(r'[^\w\s]', '', sample_raw.lower())
+    try:
+        nltk.download("stopwords", quiet=True)
+        nltk.download("punkt_tab", quiet=True)
+        nltk.download("wordnet", quiet=True)
+        from nltk.corpus import stopwords as _sw
+        from nltk.tokenize import word_tokenize as _wt
+        from nltk.stem import WordNetLemmatizer as _WNL
+        _stop_words = set(_sw.words("english"))
+        _tokens = [t for t in _wt(_cleaned) if t not in _stop_words and len(t) > 1]
+    except Exception:
+        # Fallback for older NLTK versions using 'punkt' instead of 'punkt_tab'
+        nltk.download("punkt", quiet=True)
+        from nltk.tokenize import word_tokenize as _wt
+        from nltk.corpus import stopwords as _sw
+        from nltk.stem import WordNetLemmatizer as _WNL
+        _stop_words = set(_sw.words("english"))
+        _tokens = [t for t in _wt(_cleaned) if t not in _stop_words and len(t) > 1]
+    _lem = _WNL()
+    _lemmatized = [_lem.lemmatize(t) for t in _tokens]
+    _sia = load_vader()
+    _scores = _sia.polarity_scores(sample_raw)
+    _vader_label = "POSITIVE" if _scores['compound'] >= 0.05 else "NEGATIVE" if _scores['compound'] <= -0.05 else "NEUTRAL"
+
     with st.expander("① Raw Text (Original Input)"):
         st.code(sample_raw, language="text")
     with st.expander("② After Lowercasing & Punctuation Removal"):
-        cleaned = re.sub(r'[^\w\s]', '', sample_raw.lower())
-        st.code(cleaned, language="text")
+        st.code(_cleaned, language="text")
     with st.expander("③ After Tokenization & Stopword Removal"):
-        nltk.download("stopwords", quiet=True); nltk.download("punkt_tab", quiet=True)
-        from nltk.corpus import stopwords
-        from nltk.tokenize import word_tokenize
-        stop_words = set(stopwords.words("english"))
-        tokens = [t for t in word_tokenize(cleaned) if t not in stop_words and len(t) > 1]
-        st.code(" | ".join(tokens), language="text")
+        st.code(" | ".join(_tokens), language="text")
     with st.expander("④ After WordNet Lemmatization"):
-        nltk.download("wordnet", quiet=True)
-        from nltk.stem import WordNetLemmatizer
-        lem = WordNetLemmatizer()
-        lemmatized = [lem.lemmatize(t) for t in tokens]
-        st.code(" | ".join(lemmatized), language="text")
+        st.code(" | ".join(_lemmatized), language="text")
     with st.expander("⑤ VADER Compound Score"):
-        sia = load_vader()
-        scores = sia.polarity_scores(sample_raw)
         col_a, col_b = st.columns(2)
-        col_a.json(scores)
-        label = "POSITIVE" if scores['compound'] >= 0.05 else "NEGATIVE" if scores['compound'] <= -0.05 else "NEUTRAL"
-        col_b.markdown(f"**Compound**: `{scores['compound']:.4f}`  \n**Label**: `{label}`")
+        col_a.json(_scores)
+        col_b.markdown(f"**Compound**: `{_scores['compound']:.4f}`  \n**Label**: `{_vader_label}`")
 
     st.markdown("<br>", unsafe_allow_html=True)
     col_l, col_r = st.columns(2)
@@ -698,6 +704,14 @@ elif navigation == "Live Analyser":
     st.markdown("<hr style='border-color:#1A2A2A;'>", unsafe_allow_html=True)
 
     st.markdown(f"<p style='color:{GRAY};font-size:0.82rem;'> <i>DistilBERT loads on first use — may take a few seconds on CPU.</i></p>", unsafe_allow_html=True)
+
+    @st.cache_resource
+    def load_distilbert():
+        from transformers import pipeline as hf_pipeline
+        return hf_pipeline(
+            "sentiment-analysis",
+            model="distilbert-base-uncased-finetuned-sst-2-english"
+        )
 
     user_input = st.text_area(
         "Enter feedback text:",
