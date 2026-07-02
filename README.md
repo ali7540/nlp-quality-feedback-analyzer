@@ -22,7 +22,8 @@ nlp-quality-feedback-analyzer/
 │   └── raw/                 # Unmodified raw source dataset (jindal_feedback.csv)
 ├── models/                  # Saved models (classifiers, topic models)
 ├── notebooks/               # Jupyter notebooks for data analysis & pipelines
-│   └── week1_preprocessing.ipynb
+│   ├── week1_preprocessing.ipynb
+│   └── week2_sentiment.ipynb
 ├── outputs/
 │   ├── figures/             # Data charts, graphs, and analysis figures
 │   └── wordclouds/          # Generated word cloud visualization exports
@@ -46,11 +47,29 @@ During the initial preprocessing phase, the raw dataset was cleaned and curated:
   * Cleaned review data stored in `data/processed/reviews_cleaned.csv`.
   * Generated negative and positive comparative word clouds inside `outputs/wordclouds/` (`wordcloud_negative.png` and `wordcloud_positive.png`).
 
+ ## 🧠 Sentiment Analysis Pipeline & Details
+During the sentiment analysis phase, lexical rule-based scoring and deep learning transformers were evaluated:
+* **Ground-Truth Label Derivation**:
+  * Categorized true ratings into three classes: 1-2 stars $\rightarrow$ `negative`, 3 stars $\rightarrow$ `neutral`, and 4-5 stars $\rightarrow$ `positive`.
+* **VADER Classifier (Rule-Based)**:
+  * Applied VADER's `SentimentIntensityAnalyzer` to raw (uncleaned) text to preserve stylistic cues (punctuation, capitalization, intensifiers).
+  * Mapped compound scores to classes ($\ge 0.05$ positive, $\le -0.05$ negative, neutral otherwise).
+  * Uncovered a corporate politeness bias (VADER predicted **73.15% positive** feedback vs. **55.22%** true due to polite syntax in complaints).
+* **DistilBERT Classifier (Deep Learning)**:
+  * Loaded pre-trained `distilbert-base-uncased-finetuned-sst-2-english` transformer pipeline to perform inference on a 2,500-review sample.
+  * Evaluated 3-class overall accuracy (**78.48%** vs. VADER's **68.35%**) and isolated 2-class binary accuracy (**96.60%** vs. VADER's **85.38%**, excluding neutral reviews due to the model's binary constraint).
+* **Output Artifacts**:
+  * Intermediate dataset containing VADER predictions stored in `outputs/sentiment_stage1.csv` (10,000 rows).
+  * Inference dataset containing DistilBERT predictions stored in `outputs/distilbert_stage2.csv` (2,500 rows).
+  * Final comparative validation dataset stored in `outputs/labeled_dataset.csv` (2,500 rows).
+  * Performance charts saved under `outputs/figures/`: Confusion Matrix Heatmap (`confusion_matrix.png`) and Clustered Accuracy/Speed comparison chart (`sentiment_comparison_chart.png`).
+
+
 ---
 
 ## 🚦 Progress
 - [x] **Week 1** — Text Data & Preprocessing
-- [ ] **Week 2** — Sentiment Analysis
+- [x] **Week 2** — Sentiment Analysis & Benchmarking
 - [ ] **Week 3** — Topic Modeling & Entity Extraction
 - [ ] **Week 4** — Dashboard & Presentation
 
@@ -81,4 +100,16 @@ Follow these instructions to set up the project locally:
    Open and execute the Jupyter notebook to see the data loading, cleaning, and word cloud generation:
    ```bash
    jupyter notebook notebooks/week1_preprocessing.ipynb
+   ```
+
+5. **Run the Sentiment Pipeline**:
+   Open and execute the Jupyter notebook to run VADER and DistilBERT model evaluations:
+   ```bash
+   jupyter notebook notebooks/week2_sentiment.ipynb
+   ```
+
+6. **Launch the Streamlit Dashboard**:
+   Start the interactive dashboard locally to explore the pipeline flow, EDA visualizations, model benchmarks, and live sentiment analyzer:
+   ```bash
+   streamlit run app/main.py
    ```
