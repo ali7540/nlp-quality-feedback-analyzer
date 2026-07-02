@@ -366,30 +366,31 @@ if navigation == "Overview & Pipeline":
 
     sample_raw = "We appreciate the prompt engineer visit, but the Rebar TMT bars from Raigarh have inconsistent tensile strength! IS 1786 compliance is failing."
 
-    # Pre-compute all transformations upfront so expanders can open in any order
+    # Pre-compute all transformations — guarded so any NLTK issue never crashes the page
     _cleaned = re.sub(r'[^\w\s]', '', sample_raw.lower())
     try:
-        nltk.download("stopwords", quiet=True)
-        nltk.download("punkt_tab", quiet=True)
-        nltk.download("wordnet", quiet=True)
+        for _pkg in ["stopwords", "punkt_tab", "punkt", "wordnet"]:
+            nltk.download(_pkg, quiet=True)
         from nltk.corpus import stopwords as _sw
         from nltk.tokenize import word_tokenize as _wt
         from nltk.stem import WordNetLemmatizer as _WNL
         _stop_words = set(_sw.words("english"))
         _tokens = [t for t in _wt(_cleaned) if t not in _stop_words and len(t) > 1]
-    except Exception:
-        # Fallback for older NLTK versions using 'punkt' instead of 'punkt_tab'
-        nltk.download("punkt", quiet=True)
-        from nltk.tokenize import word_tokenize as _wt
-        from nltk.corpus import stopwords as _sw
-        from nltk.stem import WordNetLemmatizer as _WNL
-        _stop_words = set(_sw.words("english"))
-        _tokens = [t for t in _wt(_cleaned) if t not in _stop_words and len(t) > 1]
-    _lem = _WNL()
-    _lemmatized = [_lem.lemmatize(t) for t in _tokens]
+        _lem = _WNL()
+        _lemmatized = [_lem.lemmatize(t) for t in _tokens]
+        _pipeline_ok = True
+    except Exception as _e:
+        _tokens = [w for w in _cleaned.split() if len(w) > 1]
+        _lemmatized = _tokens
+        _pipeline_ok = False
+        _pipeline_err = str(_e)
+
     _sia = load_vader()
     _scores = _sia.polarity_scores(sample_raw)
     _vader_label = "POSITIVE" if _scores['compound'] >= 0.05 else "NEGATIVE" if _scores['compound'] <= -0.05 else "NEUTRAL"
+
+    if not _pipeline_ok:
+        st.warning(f"NLTK pipeline error (using basic fallback): {_pipeline_err}")
 
     with st.expander("① Raw Text (Original Input)"):
         st.code(sample_raw, language="text")
