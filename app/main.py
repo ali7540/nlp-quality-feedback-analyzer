@@ -364,7 +364,7 @@ if navigation == "Overview & Pipeline":
     st.markdown(f"<h3 style='color:{WHITE};'> Pipeline Step Inspector</h3>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{GRAY};'>Expand each step to see exactly how text is transformed through the pipeline.</p>", unsafe_allow_html=True)
 
-    sample_raw = "We appreciate the prompt engineer visit, but the Rebar TMT bars from Raigarh have inconsistent tensile strength! IS 1786 compliance is failing."
+    sample_raw = "Our dealership operations benefit tremendously from the pricing JSL offers on Beams and Columns sections. The 199 MT batch from Raigarh arrived with complete documentation, and the commercial terms allow us adequate margin while remaining competitive in West India. Your accounts team's efficiency in processing payment receipts and issuing credit notes is commendable. We look forward to expanding this partnership."
 
     # Pre-compute all transformations — guarded so any NLTK issue never crashes the page
     _cleaned = re.sub(r'[^\w\s]', '', sample_raw.lower())

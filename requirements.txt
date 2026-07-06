@@ -9,3 +9,4 @@ wordcloud
 matplotlib
 streamlit
 plotly
+gensim
