@@ -113,3 +113,9 @@ Follow these instructions to set up the project locally:
    ```bash
    streamlit run app/main.py
    ```
+   Week 3 Completed
+
+• Topic Modeling completed
+• Named Entity Recognition added
+• Final enriched dataset generated
+• Topic visualizations created
