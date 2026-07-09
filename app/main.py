@@ -714,6 +714,34 @@ elif navigation == "Live Analyser":
             model="distilbert-base-uncased-finetuned-sst-2-english"
         )
 
+    @st.cache_resource
+    def load_lda_model_and_dict():
+        from gensim.models import LdaModel
+        from gensim.corpora import Dictionary
+        lda_path = os.path.join(base_dir, "models", "lda_model", "lda_model")
+        dict_path = os.path.join(base_dir, "models", "lda_model", "lda_dict")
+        return LdaModel.load(lda_path), Dictionary.load(dict_path)
+
+    @st.cache_resource
+    def load_spacy_model():
+        import spacy
+        try:
+            return spacy.load("en_core_web_sm")
+        except OSError:
+            import subprocess
+            import sys
+            subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"], check=True)
+            return spacy.load("en_core_web_sm")
+
+    topic_mapping = {
+        0: 'packaging and handling',
+        1: 'delivery and logistics',
+        2: 'product and quality',
+        3: 'customer service',
+        4: 'pricing and commercial',
+        5: 'technical compliance'
+    }
+
     user_input = st.text_area(
         "Enter feedback text:",
         placeholder="e.g. We appreciate the prompt delivery, but the HR plates from Angul showed surface pitting that failed our IS 2062 acceptance criteria.",
@@ -784,24 +812,135 @@ elif navigation == "Live Analyser":
               </div>
             </div>""", unsafe_allow_html=True)
 
-        # # VADER breakdown bar chart
-        # st.markdown("<br>", unsafe_allow_html=True)
-        # st.markdown(f"<h4 style='color:{WHITE};'>VADER Score Breakdown</h4>", unsafe_allow_html=True)
-        # vader_df = pd.DataFrame({
-        #     "Category": ["Positive", "Neutral", "Negative"],
-        #     "Score": [vader_scores["pos"], vader_scores["neu"], vader_scores["neg"]],
-        #     "Color": [CYAN, "#FBBF24", "#EF4444"]
-        # })
-        # fig_vader = go.Figure(go.Bar(
-        #     x=vader_df["Category"], y=vader_df["Score"],
-        #     marker_color=vader_df["Color"],
-        #     text=[f"{v:.3f}" for v in vader_df["Score"]],
-        #     textposition="outside"
-        # ))
-        # fig_vader.update_layout(template=PLOTLY_TEMPLATE, paper_bgcolor="rgba(0,0,0,0)",
-        #                         font_color=WHITE, margin=dict(t=10, b=10),
-        #                         yaxis=dict(range=[0, 1]))
-        # st.plotly_chart(fig_vader, use_container_width=True)
+        # Run topic prediction
+        lda_model, dictionary = load_lda_model_and_dict()
+        cleaned_text = re.sub(r'[^\w\s]', '', user_input.lower())
+        try:
+            from nltk.corpus import stopwords
+            from nltk.tokenize import word_tokenize
+            from nltk.stem import WordNetLemmatizer
+            stop_words = set(stopwords.words("english"))
+            tokens = [t for t in word_tokenize(cleaned_text) if t not in stop_words and len(t) > 1]
+            lem = WordNetLemmatizer()
+            lemmatized = [lem.lemmatize(t) for t in tokens]
+        except Exception:
+            lemmatized = [w for w in cleaned_text.split() if len(w) > 1]
+        
+        bow = dictionary.doc2bow(lemmatized)
+        topic_probs = lda_model.get_document_topics(bow, minimum_probability=0.0)
+        probs_dict = {topic_mapping[t_idx]: float(prob) for t_idx, prob in topic_probs}
+        dominant_topic = max(probs_dict, key=probs_dict.get)
+        dominant_prob = probs_dict[dominant_topic]
+        
+        # spaCy entities
+        nlp = load_spacy_model()
+        doc = nlp(user_input)
+        spacy_ents = sorted(list(set([ent.text.strip() for ent in doc.ents if len(ent.text.strip()) > 1])))
+        
+        # Quality keywords
+        quality_terms = [
+            "strength", "tensile", "compliance", "pitting", "crack", "cracks", 
+            "rust", "rusting", "tolerance", "dimensional", "thickness", "grade", "surface", 
+            "fabrication", "sec", "pf", "rebar", "rebars", "tmt", "beam", "beams", "column", 
+            "columns", "plate", "plates", "coil", "coils", "consignment", "degraded", "packaging", 
+            "strapping", "freight", "invoicing", "payment", "gst"
+        ]
+        found_keywords = []
+        lower_input = user_input.lower()
+        for term in quality_terms:
+            if re.search(r'\b' + re.escape(term) + r'\b', lower_input):
+                found_keywords.append(term)
+        found_keywords = sorted(list(set(found_keywords)))
+        
+        # ─────────────────────────────────────────────
+        # Render Topic Prediction Section
+        # ─────────────────────────────────────────────
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(f"<div style='display:flex;align-items:center;gap:8px;margin-bottom:12px;'><div style='width:8px;height:8px;border-radius:50%;background:{CYAN};'></div><h3 style='color:{WHITE};margin:0;font-size:1.1rem;font-weight:600;'>Topic Prediction · LDA</h3></div>", unsafe_allow_html=True)
+        
+        lda_col1, lda_col2 = st.columns([1, 2])
+        
+        with lda_col1:
+            dominant_title = dominant_topic.title()
+            # SVG Donut Confidence Circle
+            st.markdown(f"""
+            <div class="result-card" style="height: 240px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; padding: 20px 12px;">
+              <div style="text-align: center; display: flex; flex-direction: column; align-items: center;">
+                <div style="font-size: 1.5rem; margin-bottom: 2px;">📊</div>
+                <div class="result-model" style="font-size: 0.72rem; color: #7E8D8E; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;">DOMINANT TOPIC</div>
+                <div style="font-size: 1.25rem; font-weight: 700; color: {CYAN}; line-height: 1.2; max-width: 180px;">{dominant_title}</div>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: center; margin-top: 10px;">
+                <svg width="76" height="76" viewBox="0 0 80 80">
+                  <circle cx="40" cy="40" r="32" stroke="#1A2A2A" stroke-width="6" fill="transparent" />
+                  <circle cx="40" cy="40" r="32" stroke="{CYAN}" stroke-width="6" fill="transparent"
+                          stroke-dasharray="201" stroke-dashoffset="{int(201 * (1 - dominant_prob))}"
+                          stroke-linecap="round" transform="rotate(-90 40 40)" />
+                  <text x="50%" y="54%" text-anchor="middle" fill="#F0F4F8" font-weight="700" font-size="13px" dy=".3em">{dominant_prob*100:.1f}%</text>
+                </svg>
+                <div style="font-size: 0.68rem; color: #7E8D8E; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 8px;">TOPIC CONFIDENCE</div>
+              </div>
+            </div>""", unsafe_allow_html=True)
+            
+        with lda_col2:
+            # Plotly Horizontal Bar Chart
+            sorted_probs = sorted(probs_dict.items(), key=lambda x: x[1])
+            topics_sorted = [t[0].title() for t in sorted_probs]
+            probs_sorted = [t[1] * 100 for t in sorted_probs]
+            
+            fig_topics = go.Figure(go.Bar(
+                x=probs_sorted,
+                y=topics_sorted,
+                orientation='h',
+                marker=dict(
+                    color=probs_sorted,
+                    colorscale=[[0.0, TEAL], [1.0, CYAN]],
+                    line=dict(width=0)
+                ),
+                text=[f"{p:.1f}%" for p in probs_sorted],
+                textposition='outside',
+                textfont=dict(color=WHITE, size=10)
+            ))
+            fig_topics.update_layout(
+                template=PLOTLY_TEMPLATE,
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                margin=dict(t=10, b=10, l=10, r=30),
+                height=240,
+                xaxis=dict(
+                    title=dict(text="Probability (%)", font=dict(color=GRAY, size=11)),
+                    tickfont=dict(color=GRAY, size=10),
+                    showgrid=True,
+                    gridcolor="#1A2A2A",
+                    zeroline=False,
+                    range=[0, max(probs_sorted) * 1.22]
+                ),
+                yaxis=dict(
+                    title="",
+                    tickfont=dict(color=WHITE, size=11),
+                    showgrid=False
+                ),
+                showlegend=False
+            )
+            st.plotly_chart(fig_topics, use_container_width=True)
+            
+        # ─────────────────────────────────────────────
+        # Render Extracted Entities & Quality Keywords
+        # ─────────────────────────────────────────────
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(f"<div style='display:flex;align-items:center;gap:8px;margin-bottom:12px;'><div style='width:8px;height:8px;border-radius:50%;background:#D946EF;'></div><h3 style='color:{WHITE};margin:0;font-size:1.1rem;font-weight:600;'>Extracted Entities & Quality Keywords</h3></div>", unsafe_allow_html=True)
+        
+        all_tags = spacy_ents + found_keywords
+        if all_tags:
+            tags_html = ""
+            for tag in all_tags:
+                tags_html += f"""
+                <span style='background:#121820; border:1px solid #1A2A2A; color:#F0F4F8; border-radius:6px; padding:6px 12px; font-size:0.82rem; margin-right:8px; margin-bottom:8px; display:inline-block;'>
+                  🏷️ {tag}
+                </span>"""
+            st.markdown(f"<div style='display:flex; flex-wrap:wrap;'>{tags_html}</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<p style='color:{GRAY}; font-size:0.85rem; font-style:italic;'>No entities or quality keywords detected in this feedback.</p>", unsafe_allow_html=True)
 
     elif analyse_btn:
         st.warning("Please enter some feedback text before clicking Analyse.")
