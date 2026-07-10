@@ -44,12 +44,19 @@ TEAL_SCALE = [[0, "#0E1418"], [0.5, "#0E6243"], [1.0, "#00E5CC"]]
 # PATHS
 # ─────────────────────────────────────────────
 base_dir           = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-cleaned_data_path  = os.path.join(base_dir, "data", "processed", "reviews_cleaned.csv")
-labeled_data_path  = os.path.join(base_dir, "outputs", "labeled_dataset.csv")
-conf_matrix_path   = os.path.join(base_dir, "outputs", "figures", "confusion_matrix.png")
-comp_chart_path    = os.path.join(base_dir, "outputs", "figures", "sentiment_comparison_chart.png")
-wc_neg_path        = os.path.join(base_dir, "outputs", "wordclouds", "wordcloud_negative.png")
-wc_pos_path        = os.path.join(base_dir, "outputs", "wordclouds", "wordcloud_positive.png")
+cleaned_data_path   = os.path.join(base_dir, "data", "processed", "reviews_cleaned.csv")
+labeled_data_path   = os.path.join(base_dir, "outputs", "labeled_dataset.csv")
+topics_data_path    = os.path.join(base_dir, "outputs", "topics_stage1.csv")
+conf_matrix_path    = os.path.join(base_dir, "outputs", "figures", "confusion_matrix.png")
+comp_chart_path     = os.path.join(base_dir, "outputs", "figures", "sentiment_comparison_chart.png")
+wc_neg_path         = os.path.join(base_dir, "outputs", "wordclouds", "wordcloud_negative.png")
+wc_pos_path         = os.path.join(base_dir, "outputs", "wordclouds", "wordcloud_positive.png")
+# Week 3 figure paths
+w3_sentiment_fig    = os.path.join(base_dir, "outputs", "figures", "topic_sentiment_breakdown.png")
+w3_heatmap_fig      = os.path.join(base_dir, "outputs", "figures", "topic_rating_heatmap.png")
+w3_region_fig       = os.path.join(base_dir, "outputs", "figures", "topic_region_distribution.png")
+w3_product_fig      = os.path.join(base_dir, "outputs", "figures", "topic_product_distribution.png")
+w3_topic_freq_fig   = os.path.join(base_dir, "outputs", "figures", "topic_frequency.png")
 
 # ─────────────────────────────────────────────
 # GLOBAL CSS
@@ -85,6 +92,11 @@ html, body, [class*="css"] {{
     padding: 18px 14px;
     text-align: center;
     margin-bottom: 12px;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }}
 .kpi-value {{
     font-size: 1.9rem;
@@ -208,6 +220,23 @@ html, body, [class*="css"] {{
     background-color: #0A4D34 !important;
 }}
 
+/* Sample input buttons — muted grey style */
+.sample-btn .stButton > button {{
+    background-color: #1C2A2A !important;
+    color: {GRAY} !important;
+    border: 1px solid {BORDER} !important;
+    font-weight: 500 !important;
+    font-size: 0.80rem !important;
+    width: 100% !important;
+    text-align: left !important;
+    padding: 8px 12px !important;
+}}
+.sample-btn .stButton > button:hover {{
+    background-color: #1A2A2A !important;
+    color: {WHITE} !important;
+    border-color: {GRAY} !important;
+}}
+
 /* Multiselect pills & selectbox — keep text visible */
 [data-baseweb="select"] {{
     background-color: {CARD} !important;
@@ -243,6 +272,7 @@ def load_vader():
 
 df_cleaned = load_data(cleaned_data_path)
 df_labeled = load_data(labeled_data_path)
+df_topics  = load_data(topics_data_path)
 
 # ─────────────────────────────────────────────
 # SIDEBAR
@@ -260,6 +290,7 @@ navigation = st.sidebar.radio(
         "Overview & Pipeline",
         "Week 1 · Exploration",
         "Week 2 · Model Analysis",
+        "Week 3 · Topic Analysis",
         "Live Analyser",
         "Data Explorer",
     ]
@@ -494,7 +525,13 @@ elif navigation == "Week 1 · Exploration":
         fig_pie = px.pie(cust_counts, names="label", values="count",
                          color_discrete_sequence=[CYAN, TEAL, "#00A896", "#028090", "#05668D", "#02C39A", "#F0F3BD"],
                          hole=0.45, template=PLOTLY_TEMPLATE, title="Customer Segment Mix")
-        fig_pie.update_layout(paper_bgcolor="rgba(0,0,0,0)", font_color=WHITE, margin=dict(t=40, b=10))
+        fig_pie.update_traces(textposition='inside', textinfo='percent')
+        fig_pie.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", font_color=WHITE, height=380,
+            margin=dict(t=50, b=100, l=20, r=20),
+            legend=dict(orientation="h", yanchor="top", y=-0.12, xanchor="center", x=0.5,
+                        font=dict(size=11))
+        )
         st.plotly_chart(fig_pie, use_container_width=True)
 
     # Row 2: Region & Severity
@@ -697,7 +734,381 @@ elif navigation == "Week 2 · Model Analysis":
         # ), unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# PAGE 4: LIVE ANALYSER
+# PAGE 4: WEEK 3 TOPIC ANALYSIS
+# ─────────────────────────────────────────────
+elif navigation == "Week 3 · Topic Analysis":
+    st.markdown(f"<h1 style='color:{WHITE};'>⚙ Week 3 · Topic Modeling & Analysis</h1>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color:{GRAY};'>LDA topic model trained on 10,000 Jindal Steel B2B feedback reviews · 6 business topic categories</p>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color:#1A2A2A;'>", unsafe_allow_html=True)
+
+    df_t = load_data(os.path.join(base_dir, "outputs", "extracted_topics.csv"))
+    if df_t is None:
+        df_t = df_topics.copy() if df_topics is not None else None
+
+    if df_t is None:
+        st.error("Topic dataset not found at outputs/extracted_topics.csv or outputs/topics_stage1.csv")
+        st.stop()
+
+    # Merge with cleaned data for region + product + customer_type + plant_location
+    if df_cleaned is not None:
+        cols_to_use = [c for c in ['feedback_text', 'customer_region', 'product_category', 'customer_type', 'plant_location'] if c in df_cleaned.columns]
+        merge_key = 'review text' if 'review text' in df_t.columns else 'feedback_text'
+        cols_to_merge = ['feedback_text'] + [c for c in cols_to_use if c != 'feedback_text' and c not in df_t.columns]
+        df_t = pd.merge(
+            df_t,
+            df_cleaned[cols_to_merge],
+            left_on=merge_key, right_on='feedback_text', how='inner'
+        )
+        if 'feedback_text' in df_t.columns and merge_key != 'feedback_text':
+            df_t = df_t.drop(columns=['feedback_text'])
+
+    topic_order = [
+        'product and quality', 'delivery and logistics', 'technical compliance',
+        'customer service', 'packaging and handling', 'pricing and commercial'
+    ]
+
+    tab1, tab2 = st.tabs(["📊 Global Topic Distribution", "🔍 Topic Deep-Dive Dashboard"])
+
+    with tab1:
+        # ── KPI row ──────────────────────────────────────────
+        dominant = df_t['topic_label'].value_counts().idxmax()
+        lowest_avg = df_t.groupby('topic_label')['rating'].mean().idxmin()
+        neg_pct = round((df_t['distilbert_label'] == 'negative').mean() * 100, 1)
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.markdown(kpi("6", "LDA Topics", "Gensim · 10 passes"), unsafe_allow_html=True)
+        k2.markdown(kpi(dominant.title(), "Dominant Topic", "By review count", accent=CYAN), unsafe_allow_html=True)
+        k3.markdown(kpi(f"{neg_pct}%", "Negative Reviews", "DistilBERT overall", accent="#EF4444"), unsafe_allow_html=True)
+        k4.markdown(kpi(lowest_avg.title(), "Lowest Avg Rating", "Most severe topic", accent="#FBBF24"), unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # ── Row 1: Topic Frequency & Interactive Sentiment Breakdown ────────────
+        st.markdown(f"<h3 style='color:{WHITE};'>Topic Frequency & Sentiment Breakdown</h3>", unsafe_allow_html=True)
+        tf_c1, tf_c2 = st.columns(2)
+
+        with tf_c1:
+            st.markdown(f"<p style='color:{GRAY};font-size:0.85rem;'>Review count per topic split by severity rating (1–5).</p>", unsafe_allow_html=True)
+            if os.path.exists(w3_topic_freq_fig):
+                st.image(Image.open(w3_topic_freq_fig), use_container_width=True)
+            else:
+                st.warning("topic_frequency.png not found.")
+
+        with tf_c2:
+            st.markdown(f"<p style='color:{GRAY};font-size:0.85rem;'>Interactive sentiment labels breakdown within each topic category.</p>", unsafe_allow_html=True)
+            topic_sent_df = (
+                df_t.groupby(['topic_label', 'vader_label'])
+                .size()
+                .reset_index(name='count')
+            )
+            topic_sent_df['pct'] = topic_sent_df.groupby('topic_label')['count'].transform(lambda x: x / x.sum() * 100)
+            sent_color_map = {'positive': CYAN, 'neutral': '#FBBF24', 'negative': '#EF4444'}
+            fig_sent = px.bar(
+                topic_sent_df,
+                x='topic_label', y='pct', color='vader_label',
+                color_discrete_map=sent_color_map,
+                template=PLOTLY_TEMPLATE,
+                labels={'topic_label': 'Topic', 'pct': '% of Reviews', 'vader_label': 'Sentiment'},
+                text=topic_sent_df['pct'].apply(lambda v: f'{v:.1f}%'),
+                barmode='stack'
+            )
+            fig_sent.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                font_color=WHITE, margin=dict(t=10, b=10),
+                xaxis_tickangle=-20, legend_title_text='Sentiment', height=360
+            )
+            fig_sent.update_traces(textposition='inside')
+            st.plotly_chart(fig_sent, use_container_width=True)
+
+        st.markdown("<hr style='border-color:#1A2A2A;'>", unsafe_allow_html=True)
+
+        # ── Row 2: Severity Heatmap & Avg Rating ────────────────────────────────────
+        st.markdown(f"<h3 style='color:{WHITE};'>Topic Severity Analysis</h3>", unsafe_allow_html=True)
+        hm_c1, hm_c2 = st.columns(2)
+
+        with hm_c1:
+            st.markdown(f"<p style='color:{GRAY};font-size:0.85rem;'>Complaints accumulation heatmap across the 5-star rating scale.</p>", unsafe_allow_html=True)
+            if os.path.exists(w3_heatmap_fig):
+                st.image(Image.open(w3_heatmap_fig), use_container_width=True)
+            else:
+                st.warning("topic_rating_heatmap.png not found.")
+
+        with hm_c2:
+            st.markdown(f"<p style='color:{GRAY};font-size:0.85rem;'>Interactive average customer rating per topic (dotted line is overall average).</p>", unsafe_allow_html=True)
+            avg_r = df_t.groupby('topic_label')['rating'].mean().reset_index()
+            avg_r.columns = ['topic', 'avg_rating']
+            avg_r = avg_r.sort_values('avg_rating')
+            overall_avg = df_t['rating'].mean()
+            fig_avg = go.Figure()
+            fig_avg.add_trace(go.Bar(
+                y=avg_r['topic'], x=avg_r['avg_rating'], orientation='h',
+                marker=dict(color=avg_r['avg_rating'], colorscale=[[0, '#EF4444'], [0.5, '#FBBF24'], [1.0, CYAN]],
+                            showscale=False),
+                text=[f'{v:.2f}' for v in avg_r['avg_rating']], textposition='outside'
+            ))
+            fig_avg.add_vline(x=overall_avg, line_dash='dash', line_color=CYAN,
+                              annotation_text=f'Avg: {overall_avg:.2f}', annotation_position='top right')
+            fig_avg.update_layout(
+                template=PLOTLY_TEMPLATE, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                font_color=WHITE, margin=dict(t=10, b=10, l=10, r=60),
+                xaxis=dict(title='Average Severity Rating (1–5)', range=[0, 5.5]),
+                yaxis=dict(title=''), height=360
+            )
+            st.plotly_chart(fig_avg, use_container_width=True)
+
+        st.markdown("<hr style='border-color:#1A2A2A;'>", unsafe_allow_html=True)
+
+        # ── Row 3: Regional Distribution & Explorer ───────────────────────────
+        st.markdown(f"<h3 style='color:{WHITE};'>Geographic Prevalance of Topics</h3>", unsafe_allow_html=True)
+        rg_c1, rg_c2 = st.columns(2)
+
+        with rg_c1:
+            st.markdown(f"<p style='color:{GRAY};font-size:0.85rem;'>Static distribution of topics across customer regions.</p>", unsafe_allow_html=True)
+            if os.path.exists(w3_region_fig):
+                st.image(Image.open(w3_region_fig), use_container_width=True)
+            else:
+                st.warning("topic_region_distribution.png not found.")
+
+        with rg_c2:
+            st.markdown(f"<p style='color:{GRAY};font-size:0.85rem;'>Interactive Topic × Customer Region explorer.</p>", unsafe_allow_html=True)
+            if 'customer_region' in df_t.columns:
+                region_grp = (
+                    df_t.groupby(['customer_region', 'topic_label'])
+                    .size().reset_index(name='count')
+                )
+                region_grp['pct'] = region_grp.groupby('customer_region')['count'].transform(lambda x: x / x.sum() * 100)
+                topic_color_seq = [CYAN, '#0E6243', '#FBBF24', '#EF4444', '#3B82F6', '#8B5CF6']
+                fig_region = px.bar(
+                    region_grp, x='customer_region', y='pct', color='topic_label',
+                    template=PLOTLY_TEMPLATE,
+                    color_discrete_sequence=topic_color_seq,
+                    labels={'customer_region': 'Customer Region', 'pct': '% of Reviews', 'topic_label': 'Topic'},
+                    barmode='stack'
+                )
+                fig_region.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                    font_color=WHITE, margin=dict(t=10, b=10), legend_title_text='Topic', height=360
+                )
+                st.plotly_chart(fig_region, use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+    with tab2:
+        st.markdown(f"<h3 style='color:{WHITE};'>🔍 Topic Deep-Dive Dashboard</h3>", unsafe_allow_html=True)
+        st.markdown(f"<p style='color:{GRAY};font-size:0.85rem;'>Select a business topic to explore granular metrics, regional distributions, customer segments, product lines, and verbatim quotes.</p>", unsafe_allow_html=True)
+
+        selected_topic = st.selectbox(
+            "Select Topic to Explore:",
+            options=topic_order,
+            format_func=lambda x: x.title(),
+            key="deep_dive_selectbox"
+        )
+
+        df_filtered = df_t[df_t['topic_label'] == selected_topic]
+
+        if df_filtered.empty:
+            st.warning("No feedback reviews found for this topic.")
+        else:
+            # ── KPI Cards ─────────────────────────────────────
+            total_topic = len(df_filtered)
+            pct_topic = (total_topic / len(df_t)) * 100
+            avg_rating_topic = df_filtered['rating'].mean()
+
+            vader_counts = df_filtered['vader_label'].value_counts(normalize=True) * 100
+            pos_pct = vader_counts.get('positive', 0.0)
+            neg_pct = vader_counts.get('negative', 0.0)
+
+            if 'plant_location' in df_filtered.columns and not df_filtered['plant_location'].dropna().empty:
+                dom_plant = df_filtered['plant_location'].value_counts().idxmax()
+            else:
+                dom_plant = "N/A"
+
+            k_col1, k_col2, k_col3, k_col4 = st.columns(4)
+            k_col1.markdown(kpi(f"{total_topic:,}", "Topic Volume", f"{pct_topic:.1f}% of total"), unsafe_allow_html=True)
+            k_col2.markdown(kpi(f"{avg_rating_topic:.2f} ★", "Avg Rating", "Scale: 1 (worst) – 5 (best)"), unsafe_allow_html=True)
+            k_col3.markdown(kpi(f"{neg_pct:.1f}% / {pos_pct:.1f}%", "Neg / Pos Sentiment", "VADER polarity ratio", accent="#EF4444"), unsafe_allow_html=True)
+            k_col4.markdown(kpi(dom_plant.title()[:24], "Top Plant Source", "Highest feedback location", accent=CYAN), unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ── Row 1: Key Terms & Segment Mix ────────────────
+            row1_c1, row1_c2 = st.columns(2)
+
+            with row1_c1:
+                st.markdown(f"<h4 style='color:{WHITE};'>Top Words & Terms in Feedback</h4>", unsafe_allow_html=True)
+                import ast
+                from collections import Counter
+                all_words = []
+                token_col = 'tokens_list' if 'tokens_list' in df_filtered.columns else 'tokens' if 'tokens' in df_filtered.columns else None
+                for t_val in df_filtered[token_col].dropna() if token_col else df_filtered['review text'].dropna():
+                    try:
+                        if isinstance(t_val, str) and t_val.startswith('['):
+                            tokens = ast.literal_eval(t_val)
+                        elif isinstance(t_val, list):
+                            tokens = t_val
+                        else:
+                            tokens = re.sub(r'[^\w\s]', '', str(t_val).lower()).split()
+                        all_words.extend([t.lower() for t in tokens if len(str(t)) > 2])
+                    except Exception:
+                        pass
+                
+                if all_words:
+                    word_counts = Counter(all_words).most_common(10)
+                    w_df = pd.DataFrame(word_counts, columns=['word', 'count']).sort_values('count')
+                    fig_w = go.Figure(go.Bar(
+                        x=w_df['count'], y=w_df['word'], orientation='h',
+                        marker=dict(color=w_df['count'], colorscale=[[0, TEAL], [1, CYAN]], showscale=False),
+                        text=w_df['count'], textposition='outside'
+                    ))
+                    fig_w.update_layout(
+                        template=PLOTLY_TEMPLATE, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                        font_color=WHITE, margin=dict(t=10, b=10, l=10, r=40), height=280,
+                        xaxis=dict(showgrid=True, gridcolor='#1A2A2A'), yaxis=dict(title='')
+                    )
+                    st.plotly_chart(fig_w, use_container_width=True)
+                else:
+                    st.markdown(f"<p style='color:{GRAY};font-style:italic;'>No tokens available.</p>", unsafe_allow_html=True)
+
+            with row1_c2:
+                st.markdown(f"<h4 style='color:{WHITE};'>Customer Segment Mix</h4>", unsafe_allow_html=True)
+                if 'customer_type' in df_filtered.columns and not df_filtered['customer_type'].dropna().empty:
+                    cust_counts = df_filtered['customer_type'].value_counts().reset_index()
+                    cust_counts.columns = ['segment', 'count']
+                    fig_p = px.pie(
+                        cust_counts, names='segment', values='count', hole=0.45,
+                        template=PLOTLY_TEMPLATE,
+                        color_discrete_sequence=[CYAN, TEAL, '#00A896', '#028090',
+                                                 '#02C39A', '#05668D', '#028090']
+                    )
+                    fig_p.update_traces(textposition='inside', textinfo='percent')
+                    fig_p.update_layout(
+                        paper_bgcolor='rgba(0,0,0,0)', font_color=WHITE,
+                        margin=dict(t=10, b=110, l=10, r=10), height=360,
+                        legend=dict(orientation="h", yanchor="top", y=-0.08,
+                                    xanchor="center", x=0.5, font=dict(size=10),
+                                    traceorder='normal')
+                    )
+                    st.plotly_chart(fig_p, use_container_width=True)
+                else:
+                    st.markdown(f"<p style='color:{GRAY};font-style:italic;'>Customer segment data not available.</p>", unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ── Row 2: Region & Product Association ──────────
+            row2_c1, row2_c2 = st.columns(2)
+
+            with row2_c1:
+                st.markdown(f"<h4 style='color:{WHITE};'>Geographic Distribution</h4>", unsafe_allow_html=True)
+                if 'customer_region' in df_filtered.columns and not df_filtered['customer_region'].dropna().empty:
+                    reg_counts = df_filtered['customer_region'].value_counts().reset_index()
+                    reg_counts.columns = ['region', 'count']
+                    fig_r = px.bar(
+                        reg_counts, x='region', y='count',
+                        template=PLOTLY_TEMPLATE,
+                        color='count', color_continuous_scale=TEAL_SCALE
+                    )
+                    fig_r.update_layout(
+                        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                        font_color=WHITE, margin=dict(t=10, b=10, l=10, r=10), height=280,
+                        coloraxis_showscale=False, xaxis=dict(title=''), yaxis=dict(title='Review Count')
+                    )
+                    st.plotly_chart(fig_r, use_container_width=True)
+                else:
+                    st.markdown(f"<p style='color:{GRAY};font-style:italic;'>Regional data not available.</p>", unsafe_allow_html=True)
+
+            with row2_c2:
+                st.markdown(f"<h4 style='color:{WHITE};'>Product Category Association</h4>", unsafe_allow_html=True)
+                if 'product_category' in df_filtered.columns and not df_filtered['product_category'].dropna().empty:
+                    prod_counts = df_filtered['product_category'].value_counts().head(8).reset_index()
+                    prod_counts.columns = ['product', 'count']
+                    prod_counts = prod_counts.sort_values('count')
+                    fig_pr = go.Figure(go.Bar(
+                        x=prod_counts['count'], y=prod_counts['product'], orientation='h',
+                        marker=dict(color=CYAN, line_width=0),
+                        text=prod_counts['count'], textposition='outside'
+                    ))
+                    fig_pr.update_layout(
+                        template=PLOTLY_TEMPLATE, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                        font_color=WHITE, margin=dict(t=10, b=10, l=10, r=40), height=280,
+                        xaxis=dict(showgrid=True, gridcolor='#1A2A2A'), yaxis=dict(title='')
+                    )
+                    st.plotly_chart(fig_pr, use_container_width=True)
+                else:
+                    st.markdown(f"<p style='color:{GRAY};font-style:italic;'>Product association data not available.</p>", unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ── Row 3: Extracted Entities & Keywords ───────────
+            st.markdown(f"<h4 style='color:{WHITE};'>Most Common Extracted Entities & Keywords</h4>", unsafe_allow_html=True)
+            all_ents = []
+            if 'entities' in df_filtered.columns:
+                for ent_val in df_filtered['entities'].dropna():
+                    try:
+                        if isinstance(ent_val, str) and ent_val.startswith('['):
+                            ents = ast.literal_eval(ent_val)
+                        elif isinstance(ent_val, list):
+                            ents = ent_val
+                        else:
+                            ents = [e.strip() for e in str(ent_val).split(',') if e.strip()]
+                        
+                        for e in ents:
+                            e_clean = str(e).strip()
+                            if len(e_clean) > 2 and not e_clean.replace('.', '', 1).isdigit():
+                                all_ents.append(e_clean)
+                    except Exception:
+                        pass
+            
+            if all_ents:
+                top_ents = [item for item, count in Counter(all_ents).most_common(12)]
+                tags_html = ""
+                for tag in top_ents:
+                    tags_html += f"""
+                    <span style='background:#121820; border:1px solid #1A2A2A; color:#F0F4F8; border-radius:6px; padding:6px 12px; font-size:0.82rem; margin-right:8px; margin-bottom:8px; display:inline-block;'>
+                      🏷️ {tag}
+                    </span>"""
+                st.markdown(f"<div style='display:flex; flex-wrap:wrap;'>{tags_html}</div>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<p style='color:{GRAY};font-size:0.85rem;font-style:italic;'>No entities or keywords extracted for this topic.</p>", unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ── Row 4: Verbatim Voice Feed ───────────────────
+            st.markdown(f"<h4 style='color:{WHITE};'>Customer Voices: Verbatim Feedback</h4>", unsafe_allow_html=True)
+            st.markdown(f"<p style='color:{GRAY};font-size:0.82rem;margin-bottom:12px;'>Sample of actual client reviews for the topic, filtered by sentiment.</p>", unsafe_allow_html=True)
+            
+            sent_filter = st.selectbox(
+                "Filter verbatim reviews by sentiment:",
+                ["All Sentiments", "Positive Only", "Neutral Only", "Negative Only"],
+                key="topic_deep_dive_sent"
+            )
+            
+            df_sample = df_filtered.copy()
+            if sent_filter == "Positive Only":
+                df_sample = df_sample[df_sample['vader_label'] == 'positive']
+            elif sent_filter == "Neutral Only":
+                df_sample = df_sample[df_sample['vader_label'] == 'neutral']
+            elif sent_filter == "Negative Only":
+                df_sample = df_sample[df_sample['vader_label'] == 'negative']
+
+            if not df_sample.empty:
+                samples = df_sample.sample(min(4, len(df_sample)), random_state=42)
+                for idx, row in samples.iterrows():
+                    v_label = str(row.get('vader_label', 'neutral')).lower()
+                    color_v = CYAN if v_label == "positive" else "#EF4444" if v_label == "negative" else "#FBBF24"
+                    st.markdown(f"""
+                    <div style='background:{CARD}; border:1px solid {BORDER}; border-radius:8px; padding:16px; margin-bottom:12px;'>
+                      <div style='display:flex; justify-content:space-between; margin-bottom:8px;'>
+                        <span style='color:{GRAY}; font-size:0.78rem;'>Severity Rating: <b>{'★'*int(row['rating'])}{'☆'*(5-int(row['rating']))}</b></span>
+                        <span style='font-size:0.78rem; font-weight:700; color:{color_v};'>{v_label.upper()}</span>
+                      </div>
+                      <div style='color:{WHITE}; font-size:0.86rem; line-height:1.6;'>"{row['review text']}"</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"<p style='color:{GRAY}; font-style:italic; font-size:0.85rem;'>No matching reviews found for this sentiment filter under the selected topic.</p>", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# PAGE 5: LIVE ANALYSER
 # ─────────────────────────────────────────────
 elif navigation == "Live Analyser":
     st.markdown(f"<h1 style='color:{WHITE};'> Live Sentiment Analyser</h1>", unsafe_allow_html=True)
@@ -742,12 +1153,32 @@ elif navigation == "Live Analyser":
         5: 'technical compliance'
     }
 
-    user_input = st.text_area(
-        "Enter feedback text:",
-        placeholder="e.g. We appreciate the prompt delivery, but the HR plates from Angul showed surface pitting that failed our IS 2062 acceptance criteria.",
-        height=130,
-        key="live_input"
-    )
+    SAMPLE_INPUTS = [
+        "The HR plates from Angul showed severe surface pitting and dimensional inconsistencies that failed our IS 2062 acceptance criteria. Tensile strength was below the specified grade, forcing a full consignment rejection.",
+        "The TMT rebar consignment was delayed by 12 days beyond the committed date. The packaging was completely degraded on arrival, with strapping broken and coils exposed to moisture during freight.",
+        "We appreciate the prompt delivery and competitive pricing on the Beams and Columns sections from Raigarh. The accounts team processed our payment and issued credit notes efficiently. Looking forward to expanding this partnership.",
+    ]
+
+    def _load_sample(idx):
+        st.session_state["live_input"] = SAMPLE_INPUTS[idx]
+
+    inp_col, btn_col = st.columns([3, 1])
+
+    with btn_col:
+        st.markdown(f"<div style='color:{GRAY};font-size:0.75rem;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;'>Try a sample</div>", unsafe_allow_html=True)
+        st.markdown('<div class="sample-btn">', unsafe_allow_html=True)
+        st.button("Sample 1", key="samp1", on_click=_load_sample, args=(0,), use_container_width=True)
+        st.button("Sample 2", key="samp2", on_click=_load_sample, args=(1,), use_container_width=True)
+        st.button("Sample 3", key="samp3", on_click=_load_sample, args=(2,), use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with inp_col:
+        user_input = st.text_area(
+            "Enter feedback text:",
+            placeholder="e.g. We appreciate the prompt delivery, but the HR plates from Angul showed surface pitting that failed our IS 2062 acceptance criteria.",
+            height=148,
+            key="live_input"
+        )
 
     analyse_btn = st.button("Analyse", type="primary")
 
