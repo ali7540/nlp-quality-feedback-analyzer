@@ -10,3 +10,6 @@ matplotlib
 streamlit
 plotly
 gensim
+transformers
+torch
+spacy
