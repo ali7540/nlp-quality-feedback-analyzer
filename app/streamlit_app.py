@@ -2,6 +2,9 @@ import os
 import sys
 import streamlit as st
 import plotly.graph_objects as go
+import pandas as pd
+from collections import Counter
+import plotly.express as px
 
 # Ensure the project root is on the path so `from utils import ...` works
 # regardless of whether the app is run as `streamlit run app/streamlit_app.py`
@@ -338,21 +341,115 @@ with tab1:
 # TAB 2 — AGGREGATE INSIGHTS  (Person 2 placeholder)
 # ═════════════════════════════════════════════
 with tab2:
-    st.markdown(f"""
-    <div style='background:{CARD};border:1px solid {BORDER};border-radius:10px;
-                padding:40px 24px;text-align:center;margin-top:20px;'>
-      <h3 style='color:{CYAN};font-weight:600;margin-bottom:10px;'>📊 Aggregate Insights Dashboard</h3>
-      <p style='color:{GRAY};font-size:1.05rem;line-height:1.6;max-width:650px;margin:0 auto;'>
-        This tab is reserved for the <b>Person 2</b> implementation. Once built, it will expose
-        historical review analytics, cross-filter widgets, temporal sentiment distribution
-        graphs, and topic association matrices derived from
-        <code>outputs/extracted_topics.csv</code>.
-      </p>
-      <div style='margin-top:24px;'>
-        <span style='background:#0E6243;color:#00E5CC;border:1px solid #00E5CC;
-                     border-radius:4px;padding:8px 16px;font-size:0.88rem;font-weight:600;'>
-          🚧 Reserved for Person 2
-        </span>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+
+    st.title("📊 Aggregate Insights Dashboard")
+
+    df = pd.read_csv("outputs/extracted_topics.csv")
+    total_reviews = len(df)
+
+positive = (df["distilbert_label"] == "POSITIVE").sum()
+negative = (df["distilbert_label"] == "NEGATIVE").sum()
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Total Reviews", total_reviews)
+col2.metric("Positive Reviews", positive)
+col3.metric("Negative Reviews", negative)
+st.subheader("Sentiment Distribution")
+
+sentiment_counts = df["distilbert_label"].value_counts()
+
+fig = px.bar(
+    x=sentiment_counts.index,
+    y=sentiment_counts.values,
+    labels={
+        "x":"Sentiment",
+        "y":"Number of Reviews"
+    },
+    title="Review Sentiment Distribution"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+st.subheader("Top Feedback Topics")
+
+topic_counts = df["topic_label"].value_counts().head(10)
+
+fig = px.bar(
+    x=topic_counts.values,
+    y=topic_counts.index,
+    orientation="h",
+    title="Top 10 Topics"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+st.sidebar.header("Filters")
+
+topic = st.sidebar.selectbox(
+    "Topic",
+    ["All"] + sorted(df["topic_label"].dropna().unique().tolist())
+)
+
+sentiment = st.sidebar.selectbox(
+    "Sentiment",
+    ["All"] + sorted(df["distilbert_label"].dropna().unique().tolist())
+)
+filtered_df = df.copy()
+
+if topic != "All":
+    filtered_df = filtered_df[
+        filtered_df["topic_label"] == topic
+    ]
+
+if sentiment != "All":
+    filtered_df = filtered_df[
+        filtered_df["distilbert_label"] == sentiment
+    ]
+    st.subheader("Filtered Reviews")
+
+st.dataframe(
+    filtered_df[
+        [
+            "review text",
+            "topic_label",
+            "distilbert_label",
+            "entities"
+        ]
+    ],
+    use_container_width=True
+)
+st.subheader("Most Common Named Entities")
+
+entity_counter = Counter()
+
+for entity in df["entities"].dropna():
+    if entity.strip():
+        entity_counter.update(
+            [e.strip() for e in entity.split(",")]
+        )
+
+entity_df = pd.DataFrame(
+    entity_counter.most_common(10),
+    columns=["Entity","Frequency"]
+)
+
+st.dataframe(entity_df)
+st.subheader("Topic Distribution")
+
+fig = px.pie(
+    df,
+    names="topic_label",
+    title="Feedback Topic Distribution"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+st.subheader("Overall Project Summary")
+
+st.success(f"""
+✔ Total Reviews Analysed : {total_reviews}
+
+✔ Positive Reviews : {positive}
+
+✔ Negative Reviews : {negative}
+
+✔ Total Topics Identified : {df['topic_label'].nunique()}
+""")
