@@ -1,11 +1,10 @@
---extra-index-url https://download.pytorch.org/whl/cpu
 pandas>=2.0.0
 numpy>=1.24.0,<2.0.0
 nltk
 matplotlib
 streamlit
 plotly
-transformers
-torch>=2.0.0,<3.0.0
 spacy
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+huggingface_hub>=0.23.0
+requests
