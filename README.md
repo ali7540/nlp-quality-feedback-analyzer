@@ -64,16 +64,27 @@ During the sentiment analysis phase, lexical rule-based scoring and deep learnin
   * Final comparative validation dataset stored in `outputs/labeled_dataset.csv` (2,500 rows).
   * Performance charts saved under `outputs/figures/`: Confusion Matrix Heatmap (`confusion_matrix.png`) and Clustered Accuracy/Speed comparison chart (`sentiment_comparison_chart.png`).
 
+## 🗺️ Topic Modeling & NER Pipeline (Week 3)
+During this phase, unstructured text was grouped into business categories, and entities were extracted:
+* **Latent Dirichlet Allocation (LDA)**:
+  * Trained an LDA model via Gensim on the lemmatized bag-of-words corpus to identify 6 key feedback clusters.
+  * Mapped topics to actionable business areas: `packaging and handling`, `delivery and logistics`, `product and quality`, `customer service`, `pricing and commercial`, and `technical compliance`.
+* **Named Entity Recognition (NER)**:
+  * Leveraged spaCy (`en_core_web_sm`) to automatically extract entities like plant locations (e.g., Angul, Raigarh), product grades (IS2062), and organizations.
+* **Output Artifacts**:
+  * Final enriched dataset saved to `outputs/extracted_topics.csv` containing sentiment labels, dominant topics, and recognized entities.
+  * Trained LDA model and dictionary stored in `models/lda_model/`.
 
----
-
-## 🚦 Progress
-- [x] **Week 1** — Text Data & Preprocessing
-- [x] **Week 2** — Sentiment Analysis & Benchmarking
-- [ ] **Week 3** — Topic Modeling & Entity Extraction
-- [ ] **Week 4** — Dashboard & Presentation
-
----
+## 🖥️ Modular System Architecture & Dashboard (Week 4)
+The final deliverable is an interactive, production-ready Streamlit application consisting of two primary layers:
+* **Backend Services (`app/utils.py`)**:
+  * Encapsulates all ML inference and disk operations.
+  * Employs `@st.cache_resource` for heavy model loading and `@st.cache_data` for dataframe parsing to maximize UI performance.
+  * **HuggingFace Serverless Inference API**: DistilBERT inference is seamlessly offloaded to HuggingFace servers via API to circumvent local memory (RAM) limitations in cloud deployments (e.g., Streamlit Cloud free-tier constraints).
+* **Interactive Dashboard (`app/streamlit_app.py`)**:
+  * **Tab 1 — Live Analyzer**: A multi-model inference sandbox where users can paste raw feedback and instantly view VADER/DistilBERT consensus, an animated LDA topic probability gauge, and spaCy entity pill-badges.
+  * **Tab 2 — Aggregate Insights**: A dataset-wide explorer featuring cross-filtered VADER vs. DistilBERT KPIs, a group-by complaint topics bar chart, side-by-side keyword frequency comparison, and an interactive data table.
+  * **Tab 3 — Deep-Dive Explorer**: A granular lens toggling between Topic-based and Product Category-based analysis. Highlights regional distribution, average ratings, localized sentiment breakdowns, and a filterable verbatim customer review feed.
 
 ## 🚀 Setup
 
@@ -90,32 +101,10 @@ Follow these instructions to set up the project locally:
    pip install -r requirements.txt
    ```
 
-3. **Download NLTK Corpora**:
-   Run the following command to download the necessary NLTK data models:
+3. **Launch the Streamlit Dashboard**:
+   Start the interactive dashboard locally to explore the dataset, aggregate analytics, topic-level deep dives, and the live feedback analyzer:
    ```bash
-   python3 -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab'); nltk.download('stopwords'); nltk.download('wordnet')"
+   streamlit run app/streamlit_app.py
    ```
 
-4. **Run the Preprocessing Pipeline**:
-   Open and execute the Jupyter notebook to see the data loading, cleaning, and word cloud generation:
-   ```bash
-   jupyter notebook notebooks/week1_preprocessing.ipynb
-   ```
-
-5. **Run the Sentiment Pipeline**:
-   Open and execute the Jupyter notebook to run VADER and DistilBERT model evaluations:
-   ```bash
-   jupyter notebook notebooks/week2_sentiment.ipynb
-   ```
-
-6. **Launch the Streamlit Dashboard**:
-   Start the interactive dashboard locally to explore the pipeline flow, EDA visualizations, model benchmarks, and live sentiment analyzer:
-   ```bash
-   streamlit run app/main.py
-   ```
-   Week 3 Completed
-
-• Topic Modeling completed
-• Named Entity Recognition added
-• Final enriched dataset generated
-• Topic visualizations created
+*(Note: If you wish to run the Jupyter Notebooks for data preprocessing, sentiment benchmarking, or topic modeling in the `notebooks/` directory, you will need to install Jupyter locally: `pip install jupyter`).*
