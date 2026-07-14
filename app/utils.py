@@ -29,7 +29,8 @@ def load_distilbert():
     from transformers import pipeline as hf_pipeline
     return hf_pipeline(
         "sentiment-analysis",
-        model="distilbert-base-uncased-finetuned-sst-2-english"
+        model="distilbert-base-uncased-finetuned-sst-2-english",
+        device=-1  # force CPU — Streamlit Cloud has no GPU
     )
 
 @st.cache_resource
