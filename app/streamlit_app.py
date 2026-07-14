@@ -200,7 +200,7 @@ with tab1:
         )
         st.markdown('<div class="sample-btn">', unsafe_allow_html=True)
         for i, (label, _) in enumerate(SAMPLE_REVIEWS):
-            st.button(label, key=f"samp{i}", on_click=_load_sample, args=(i,), use_container_width=True)
+            st.button(label, key=f"samp{i}", on_click=_load_sample, args=(i,), width='stretch')
         st.markdown("</div>", unsafe_allow_html=True)
 
     with inp_col:
@@ -286,7 +286,7 @@ with tab1:
                 yaxis=dict(title="", tickfont=dict(color=WHITE, size=11), showgrid=False),
                 showlegend=False
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         # Named Entities
         st.markdown("<br>", unsafe_allow_html=True)
@@ -382,7 +382,7 @@ with tab2:
         legend=dict(font=dict(color=WHITE), bgcolor="rgba(0,0,0,0)",
                     orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
-    st.plotly_chart(fig_cmp, use_container_width=True)
+    st.plotly_chart(fig_cmp, width='stretch')
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -407,7 +407,7 @@ with tab2:
                 yaxis=dict(tickfont=dict(color=WHITE, size=10), showgrid=False),
                 showlegend=False,
             )
-            st.plotly_chart(fig_pw, use_container_width=True)
+            st.plotly_chart(fig_pw, width='stretch')
 
     with kw_c2:
         neg_words = _top_words(df_f[df_f["distilbert_label"] == "negative"])
@@ -426,7 +426,7 @@ with tab2:
                 yaxis=dict(tickfont=dict(color=WHITE, size=10), showgrid=False),
                 showlegend=False,
             )
-            st.plotly_chart(fig_nw, use_container_width=True)
+            st.plotly_chart(fig_nw, width='stretch')
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -444,7 +444,7 @@ with tab2:
         "product_category": "Product",
         "customer_region":  "Region",
     }).reset_index(drop=True)
-    st.dataframe(display_df, use_container_width=True, height=320)
+    st.dataframe(display_df, width='stretch', height=320)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # TAB 3 — DEEP-DIVE  (Topic | Product toggle)
@@ -513,7 +513,7 @@ with tab3:
                     yaxis=dict(tickfont=dict(color=WHITE, size=10), showgrid=False),
                     showlegend=False,
                 )
-                st.plotly_chart(fig_w, use_container_width=True)
+                st.plotly_chart(fig_w, width='stretch')
 
         with row1_c2:
             _section("Geographic Distribution")
@@ -532,7 +532,7 @@ with tab3:
                     yaxis=dict(tickfont=dict(color=GRAY, size=9), gridcolor="#1A2A2A", title="Count"),
                     showlegend=False,
                 )
-                st.plotly_chart(fig_reg, use_container_width=True)
+                st.plotly_chart(fig_reg, width='stretch')
 
         # Row 2: Avg rating by region + Product breakdown
         row2_c1, row2_c2 = st.columns(2)
@@ -555,7 +555,7 @@ with tab3:
                     yaxis=dict(tickfont=dict(color=WHITE, size=10), showgrid=False),
                     showlegend=False,
                 )
-                st.plotly_chart(fig_ar, use_container_width=True)
+                st.plotly_chart(fig_ar, width='stretch')
 
         with row2_c2:
             _section("Product Category Breakdown")
@@ -575,7 +575,7 @@ with tab3:
                     yaxis=dict(tickfont=dict(color=WHITE, size=10), showgrid=False),
                     showlegend=False,
                 )
-                st.plotly_chart(fig_pr, use_container_width=True)
+                st.plotly_chart(fig_pr, width='stretch')
             else:
                 st.markdown(
                     f"<p style='color:{GRAY};font-style:italic;'>Product category data not in CSV — re-run the Week 3 notebook.</p>",
@@ -635,7 +635,7 @@ with tab3:
                     legend=dict(font=dict(color=WHITE), bgcolor="rgba(0,0,0,0)"),
                     showlegend=False,
                 )
-                st.plotly_chart(fig_sd, use_container_width=True)
+                st.plotly_chart(fig_sd, width='stretch')
 
             with row1_c2:
                 _section("Top Complaint Topics")
@@ -654,7 +654,7 @@ with tab3:
                     yaxis=dict(tickfont=dict(color=WHITE, size=10), showgrid=False),
                     showlegend=False,
                 )
-                st.plotly_chart(fig_nt, use_container_width=True)
+                st.plotly_chart(fig_nt, width='stretch')
 
             # Row 2: Regional demand + Top keywords
             row2_c1, row2_c2 = st.columns(2)
@@ -675,7 +675,7 @@ with tab3:
                         yaxis=dict(tickfont=dict(color=GRAY, size=9), gridcolor="#1A2A2A", title="Reviews"),
                         showlegend=False,
                     )
-                    st.plotly_chart(fig_rd, use_container_width=True)
+                    st.plotly_chart(fig_rd, width='stretch')
 
             with row2_c2:
                 _section("Top Keywords for This Product")
@@ -695,7 +695,7 @@ with tab3:
                         yaxis=dict(tickfont=dict(color=WHITE, size=10), showgrid=False),
                         showlegend=False,
                     )
-                    st.plotly_chart(fig_npw, use_container_width=True)
+                    st.plotly_chart(fig_npw, width='stretch')
 
             st.markdown("<br>", unsafe_allow_html=True)
 
