@@ -229,4 +229,10 @@ data/raw/Reviews.csv
 ehthumbs.db
 Thumbs.db
 
+# Project overview file for report generation (not to be pushed to github)
+project_overview.txt
+
+# Report compilation materials folder
+report_materials/
+
 
