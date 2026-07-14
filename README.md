@@ -4,7 +4,7 @@ The **NLP-Based Quality Feedback Analyzer** is an end-to-end natural language pr
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 * **Language**: Python
 * **NLP Libraries**: NLTK, spaCy, Hugging Face Transformers
 * **Visualization**: Matplotlib, WordCloud
@@ -13,7 +13,7 @@ The **NLP-Based Quality Feedback Analyzer** is an end-to-end natural language pr
 
 ---
 
-## 📂 Project Structure
+##  Project Structure
 ```text
 nlp-quality-feedback-analyzer/
 ├── app/                     # Streamlit dashboard application files
@@ -33,7 +33,7 @@ nlp-quality-feedback-analyzer/
 
 ---
 
-## 🔍 Preprocessing Pipeline & Details
+##  Preprocessing Pipeline & Details
 During the initial preprocessing phase, the raw dataset was cleaned and curated:
 * **B2B Steel Quality Feedback Dataset (Synthetic)**:
   * Ingested a raw corpus of **10,000** B2B quality feedback records from Jindal Steel Limited (pre-validated with zero duplicates, zero null values, and consistent severity-to-sentiment alignment).
@@ -47,7 +47,7 @@ During the initial preprocessing phase, the raw dataset was cleaned and curated:
   * Cleaned review data stored in `data/processed/reviews_cleaned.csv`.
   * Generated negative and positive comparative word clouds inside `outputs/wordclouds/` (`wordcloud_negative.png` and `wordcloud_positive.png`).
 
- ## 🧠 Sentiment Analysis Pipeline & Details
+ ##  Sentiment Analysis Pipeline & Details
 During the sentiment analysis phase, lexical rule-based scoring and deep learning transformers were evaluated:
 * **Ground-Truth Label Derivation**:
   * Categorized true ratings into three classes: 1-2 stars $\rightarrow$ `negative`, 3 stars $\rightarrow$ `neutral`, and 4-5 stars $\rightarrow$ `positive`.
@@ -64,7 +64,7 @@ During the sentiment analysis phase, lexical rule-based scoring and deep learnin
   * Final comparative validation dataset stored in `outputs/labeled_dataset.csv` (2,500 rows).
   * Performance charts saved under `outputs/figures/`: Confusion Matrix Heatmap (`confusion_matrix.png`) and Clustered Accuracy/Speed comparison chart (`sentiment_comparison_chart.png`).
 
-## 🗺️ Topic Modeling & NER Pipeline (Week 3)
+##  Topic Modeling & NER Pipeline
 During this phase, unstructured text was grouped into business categories, and entities were extracted:
 * **Latent Dirichlet Allocation (LDA)**:
   * Trained an LDA model via Gensim on the lemmatized bag-of-words corpus to identify 6 key feedback clusters.
@@ -75,7 +75,7 @@ During this phase, unstructured text was grouped into business categories, and e
   * Final enriched dataset saved to `outputs/extracted_topics.csv` containing sentiment labels, dominant topics, and recognized entities.
   * Trained LDA model and dictionary stored in `models/lda_model/`.
 
-## 🖥️ Modular System Architecture & Dashboard (Week 4)
+##  Modular System Architecture & Dashboard
 The final deliverable is an interactive, production-ready Streamlit application consisting of two primary layers:
 * **Backend Services (`app/utils.py`)**:
   * Encapsulates all ML inference and disk operations.
@@ -86,7 +86,7 @@ The final deliverable is an interactive, production-ready Streamlit application 
   * **Tab 2 — Aggregate Insights**: A dataset-wide explorer featuring cross-filtered VADER vs. DistilBERT KPIs, a group-by complaint topics bar chart, side-by-side keyword frequency comparison, and an interactive data table.
   * **Tab 3 — Deep-Dive Explorer**: A granular lens toggling between Topic-based and Product Category-based analysis. Highlights regional distribution, average ratings, localized sentiment breakdowns, and a filterable verbatim customer review feed.
 
-## 🚀 Setup
+##  Setup
 
 Follow these instructions to set up the project locally:
 
