@@ -38,17 +38,51 @@ def load_lda_model_and_dict():
     from gensim.corpora import Dictionary
     lda_path  = os.path.join(BASE_DIR, "models", "lda_model", "lda_model")
     dict_path = os.path.join(BASE_DIR, "models", "lda_model", "lda_dict")
-    return LdaModel.load(lda_path), Dictionary.load(dict_path)
+    try:
+        model = LdaModel.load(lda_path)
+        dictionary = Dictionary.load(dict_path)
+        return model, dictionary
+    except Exception as e:
+        # Fallback retraining mechanism on version mismatch or pickle corruption
+        try:
+            import ast
+            csv_path = os.path.join(BASE_DIR, "outputs", "extracted_topics.csv")
+            df = pd.read_csv(csv_path)
+            
+            # Parse tokens list
+            tokens_list = []
+            for t in df["tokens"].dropna():
+                try:
+                    tokens_list.append(ast.literal_eval(t))
+                except Exception:
+                    tokens_list.append(str(t).split())
+            
+            dictionary = Dictionary(tokens_list)
+            dictionary.filter_extremes(no_below=5, no_above=0.5)
+            corpus = [dictionary.doc2bow(text) for text in tokens_list]
+            
+            model = LdaModel(
+                corpus=corpus,
+                id2word=dictionary,
+                num_topics=6,
+                random_state=42,
+                passes=10
+            )
+            # Strip random_state to prevent future numpy BitGenerator unpickling issues
+            model.random_state = None
+            
+            # Save compatible version locally for fast sub-sequent loading
+            os.makedirs(os.path.dirname(lda_path), exist_ok=True)
+            model.save(lda_path)
+            dictionary.save(dict_path)
+            return model, dictionary
+        except Exception as retrain_err:
+            raise RuntimeError(f"Failed to load or retrain LDA model: {retrain_err}") from e
 
 @st.cache_resource
 def load_spacy_model():
     import spacy
-    try:
-        return spacy.load("en_core_web_sm")
-    except OSError:
-        import subprocess, sys
-        subprocess.run([sys.executable, "-m", "spacy", "download", "en_core_web_sm"], check=True)
-        return spacy.load("en_core_web_sm")
+    return spacy.load("en_core_web_sm")
 
 @st.cache_data
 def load_extracted_topics():

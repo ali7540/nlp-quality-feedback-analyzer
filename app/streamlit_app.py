@@ -19,6 +19,15 @@ except ModuleNotFoundError:
     from app.utils import analyze_review, load_extracted_topics
 
 # ─────────────────────────────────────────────
+# PAGE CONFIG  (must be the first Streamlit call)
+# ─────────────────────────────────────────────
+st.set_page_config(
+    page_title="B2B Quality Feedback Analyzer",
+    page_icon="⚙️",
+    layout="wide"
+)
+
+# ─────────────────────────────────────────────
 # DESIGN SYSTEM
 # ─────────────────────────────────────────────
 CYAN            = "#00E5CC"
@@ -35,6 +44,50 @@ PLOTLY_TEMPLATE = "plotly_dark"
 TEAL_SCALE      = [[0, TEAL], [1, CYAN]]
 RED_SCALE       = [[0, "#7f1d1d"], [1, RED]]
 
+# ─────────────────────────────────────────────
+# SESSION STATE INITIALISATION
+# (must happen before any widget with the same key)
+# ─────────────────────────────────────────────
+if "analyzer_input" not in st.session_state:
+    st.session_state["analyzer_input"] = ""
+
+# ─────────────────────────────────────────────
+# GLOBAL CSS
+# ─────────────────────────────────────────────
+st.markdown(f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; background-color: {BG}; }}
+.result-card {{
+    background: {CARD}; border: 1px solid {BORDER}; border-radius: 10px;
+    padding: 18px 14px; text-align: center; margin-top: 8px; height: 165px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+}}
+.result-model {{ font-size:0.75rem; color:{GRAY}; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }}
+.result-label {{ font-size:1.5rem; font-weight:700; line-height:1.2; }}
+.result-conf  {{ font-size:0.85rem; color:{WHITE}; margin-top:8px; }}
+.pos-label    {{ color:{CYAN}; }}
+.neg-label    {{ color:#EF4444; }}
+.neu-label    {{ color:#FBBF24; }}
+.agree-badge    {{ background:#0E6243; color:#00E5CC; padding:4px 12px; border-radius:4px; font-weight:700; font-size:0.85rem; }}
+.disagree-badge {{ background:#4C1D95; color:#C084FC; padding:4px 12px; border-radius:4px; font-weight:700; font-size:0.85rem; }}
+.sample-btn button {{ background-color:#121820 !important; color:{GRAY} !important; border:1px solid {BORDER} !important; font-size:0.82rem !important; }}
+.sample-btn button:hover {{ border-color:{CYAN} !important; color:{CYAN} !important; }}
+div[data-testid="stRadio"] > div {{ flex-direction: row !important; gap: 12px; }}
+div[data-testid="stRadio"] label {{
+    background:{CARD}; border:1px solid {BORDER}; border-radius:8px;
+    padding:8px 20px; cursor:pointer; font-size:0.9rem; color:{GRAY}; font-weight:500;
+    transition: all 0.15s ease;
+}}
+div[data-testid="stRadio"] label:has(input:checked) {{
+    border-color:{CYAN}; color:{CYAN}; background: rgba(0,229,204,0.06);
+}}
+</style>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# HELPER FUNCTIONS  (pure Python — no st.* calls inside cached helpers)
+# ─────────────────────────────────────────────
 def _kpi(val, label, sub="", accent=CYAN):
     return (
         f"<div style='background:{CARD};border:1px solid {BORDER};"
@@ -94,46 +147,6 @@ def _verbatim_feed(df_sub, key):
         )
 
 # ─────────────────────────────────────────────
-# PAGE CONFIG
-# ─────────────────────────────────────────────
-st.set_page_config(
-    page_title="B2B Quality Feedback Analyzer",
-    page_icon="⚙️",
-    layout="wide"
-)
-
-st.markdown(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-html, body, [class*="css"] {{ font-family: 'Inter', sans-serif; background-color: {BG}; }}
-.result-card {{
-    background: {CARD}; border: 1px solid {BORDER}; border-radius: 10px;
-    padding: 18px 14px; text-align: center; margin-top: 8px; height: 165px;
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-}}
-.result-model {{ font-size:0.75rem; color:{GRAY}; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; }}
-.result-label {{ font-size:1.5rem; font-weight:700; line-height:1.2; }}
-.result-conf  {{ font-size:0.85rem; color:{WHITE}; margin-top:8px; }}
-.pos-label    {{ color:{CYAN}; }}
-.neg-label    {{ color:#EF4444; }}
-.neu-label    {{ color:#FBBF24; }}
-.agree-badge    {{ background:#0E6243; color:#00E5CC; padding:4px 12px; border-radius:4px; font-weight:700; font-size:0.85rem; }}
-.disagree-badge {{ background:#4C1D95; color:#C084FC; padding:4px 12px; border-radius:4px; font-weight:700; font-size:0.85rem; }}
-.sample-btn button {{ background-color:#121820 !important; color:{GRAY} !important; border:1px solid {BORDER} !important; font-size:0.82rem !important; }}
-.sample-btn button:hover {{ border-color:{CYAN} !important; color:{CYAN} !important; }}
-div[data-testid="stRadio"] > div {{ flex-direction: row !important; gap: 12px; }}
-div[data-testid="stRadio"] label {{
-    background:{CARD}; border:1px solid {BORDER}; border-radius:8px;
-    padding:8px 20px; cursor:pointer; font-size:0.9rem; color:{GRAY}; font-weight:500;
-    transition: all 0.15s ease;
-}}
-div[data-testid="stRadio"] label:has(input:checked) {{
-    border-color:{CYAN}; color:{CYAN}; background: rgba(0,229,204,0.06);
-}}
-</style>
-""", unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────
 st.markdown(
@@ -191,6 +204,7 @@ with tab1:
         st.markdown("</div>", unsafe_allow_html=True)
 
     with inp_col:
+        # key is the single source of truth; no 'value=' argument to avoid conflict
         user_input = st.text_area(
             "Enter feedback text:", placeholder="Type or paste B2B feedback text here...",
             height=148, key="analyzer_input"
@@ -295,22 +309,18 @@ with tab1:
         st.warning("Please enter some feedback text before clicking Analyse.")
 
 # ═════════════════════════════════════════════════════════════════════════════
-# SHARED DATA LOAD (used by Tab 2 & 3)
+# SHARED DATA LOAD (used by Tab 2 & 3) — UI spinner wraps the pure cached fn
 # ═════════════════════════════════════════════════════════════════════════════
-@st.cache_data
-def _get_agg_data():
-    df = load_extracted_topics()
-    return df
+with st.spinner("Loading dataset…"):
+    df_all = load_extracted_topics()
 
-df_all = _get_agg_data()
-
-# Sidebar filters (only shown for Tab 2 context)
+# Sidebar filters
 st.sidebar.markdown(
     f"<div style='color:{CYAN};font-size:0.78rem;text-transform:uppercase;"
     f"letter-spacing:0.1em;font-weight:600;margin-bottom:8px;margin-top:20px;'>"
     f"Aggregate Filters</div>", unsafe_allow_html=True
 )
-all_topics = sorted(df_all["topic_label"].dropna().unique().tolist())
+all_topics    = sorted(df_all["topic_label"].dropna().unique().tolist())
 sel_topic     = st.sidebar.selectbox("Topic", ["All"] + all_topics, key="agg_topic")
 sel_sentiment = st.sidebar.selectbox("Sentiment", ["All", "positive", "negative"], key="agg_sent")
 
@@ -328,7 +338,6 @@ with tab2:
     pos_n   = (df_f["distilbert_label"] == "positive").sum()
     neg_n   = (df_f["distilbert_label"] == "negative").sum()
     avg_rat = df_f["rating"].mean() if total else 0
-    neg_pct = f"{neg_n / total * 100:.1f}%" if total else "—"
 
     st.markdown(
         f"<h2 style='color:{CYAN};font-weight:700;margin-bottom:4px;'>📊 Aggregate Insights</h2>"
@@ -423,7 +432,7 @@ with tab2:
 
     # ── Filtered data table ────────────────────────────────────────────────
     _section(f"Filtered Review Data ({total:,} records)", color=GRAY)
-    has_prod = "product_category" in df_f.columns
+    has_prod  = "product_category" in df_f.columns
     base_cols = ["review text", "topic_label", "distilbert_label", "vader_label", "rating"]
     extra     = ["product_category", "customer_region"] if has_prod else []
     display_df = df_f[base_cols + extra].rename(columns={
@@ -474,14 +483,14 @@ with tab3:
         t_pct     = t_total / len(df_all) * 100
         t_avg_r   = df_t["rating"].mean()
         t_neg_pct = (df_t["distilbert_label"] == "negative").mean() * 100
-        t_pos_pct = (df_t["distilbert_label"] == "positive").mean() * 100
-        t_dom_reg = df_t["customer_region"].value_counts().idxmax() if "customer_region" in df_t.columns and len(df_t) else "N/A"
+        t_dom_reg = (df_t["customer_region"].value_counts().idxmax()
+                     if "customer_region" in df_t.columns and len(df_t) else "N/A")
 
         k1, k2, k3, k4 = st.columns(4)
-        k1.markdown(_kpi(f"{t_total:,}", "Reviews", f"{t_pct:.1f}% of total"),          unsafe_allow_html=True)
-        k2.markdown(_kpi(f"{t_avg_r:.2f} ★", "Avg Rating", "1–5 scale", YELLOW),       unsafe_allow_html=True)
-        k3.markdown(_kpi(f"{t_neg_pct:.1f}%", "Negative Rate", "DistilBERT", RED),      unsafe_allow_html=True)
-        k4.markdown(_kpi(t_dom_reg, "Top Region", "Most feedback from", CYAN),           unsafe_allow_html=True)
+        k1.markdown(_kpi(f"{t_total:,}", "Reviews", f"{t_pct:.1f}% of total"),         unsafe_allow_html=True)
+        k2.markdown(_kpi(f"{t_avg_r:.2f} ★", "Avg Rating", "1–5 scale", YELLOW),      unsafe_allow_html=True)
+        k3.markdown(_kpi(f"{t_neg_pct:.1f}%", "Negative Rate", "DistilBERT", RED),     unsafe_allow_html=True)
+        k4.markdown(_kpi(t_dom_reg, "Top Region", "Most feedback from", CYAN),          unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -568,8 +577,10 @@ with tab3:
                 )
                 st.plotly_chart(fig_pr, use_container_width=True)
             else:
-                st.markdown(f"<p style='color:{GRAY};font-style:italic;'>Product category data not in CSV — re-run the Week 3 notebook.</p>",
-                            unsafe_allow_html=True)
+                st.markdown(
+                    f"<p style='color:{GRAY};font-style:italic;'>Product category data not in CSV — re-run the Week 3 notebook.</p>",
+                    unsafe_allow_html=True
+                )
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -601,10 +612,10 @@ with tab3:
             p_dom_top = df_p["topic_label"].value_counts().idxmax() if len(df_p) else "N/A"
 
             k1, k2, k3, k4 = st.columns(4)
-            k1.markdown(_kpi(f"{p_total:,}", "Reviews", f"{p_pct:.1f}% of total"),                   unsafe_allow_html=True)
-            k2.markdown(_kpi(f"{p_avg_r:.2f} ★", "Avg Rating", "1–5 scale", YELLOW),                unsafe_allow_html=True)
-            k3.markdown(_kpi(f"{p_neg_pct:.1f}%", "Negative Rate", "DistilBERT", RED),               unsafe_allow_html=True)
-            k4.markdown(_kpi(p_dom_top.title()[:22], "Top Complaint Topic", "Most common", CYAN),     unsafe_allow_html=True)
+            k1.markdown(_kpi(f"{p_total:,}", "Reviews", f"{p_pct:.1f}% of total"),                    unsafe_allow_html=True)
+            k2.markdown(_kpi(f"{p_avg_r:.2f} ★", "Avg Rating", "1–5 scale", YELLOW),                 unsafe_allow_html=True)
+            k3.markdown(_kpi(f"{p_neg_pct:.1f}%", "Negative Rate", "DistilBERT", RED),                unsafe_allow_html=True)
+            k4.markdown(_kpi(p_dom_top.title()[:22], "Top Complaint Topic", "Most common", CYAN),      unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -612,7 +623,7 @@ with tab3:
             row1_c1, row1_c2 = st.columns(2)
             with row1_c1:
                 _section("Sentiment Split")
-                s_ct  = df_p["distilbert_label"].value_counts()
+                s_ct   = df_p["distilbert_label"].value_counts()
                 colors = [CYAN if l == "positive" else RED for l in s_ct.index]
                 fig_sd = go.Figure(go.Pie(
                     labels=s_ct.index.str.title(), values=s_ct.values, hole=0.5,
